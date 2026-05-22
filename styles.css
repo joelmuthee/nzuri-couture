@@ -78,8 +78,8 @@ img { max-width: 100%; display: block; }
   width: min(1200px, 92%); margin: 0 auto; padding: 14px 0;
 }
 .brand { display: flex; align-items: center; gap: 12px; color: #fff; }
-.brand-logo { height: 56px; width: auto; max-width: 320px; display: block; object-fit: contain; }
-.footer-brand .brand-logo { height: 80px; max-width: 380px; }
+.brand-logo { height: 78px; width: auto; max-width: 320px; display: block; object-fit: contain; }
+.footer-brand .brand-logo { height: 120px; max-width: 380px; }
 .nav-links { display: flex; gap: 32px; align-items: center; }
 .nav-links a { color: #f0e9d8; font-size: 14px; font-weight: 500; letter-spacing: 0.02em; transition: color 0.2s; }
 .nav-links a:hover { color: var(--gold); }
@@ -913,8 +913,8 @@ html { scroll-behavior: smooth; }
 /* ===== MOBILE ===== */
 @media (max-width: 760px) {
   .nav-inner { padding: 8px 0; }
-  .brand-logo { height: 50px; max-width: 260px; }
-  .footer-brand .brand-logo { height: 70px; max-width: 300px; }
+  .brand-logo { height: 64px; max-width: 300px; }
+  .footer-brand .brand-logo { height: 96px; max-width: 340px; }
   .hero { padding: 48px 16px 56px; }
   .hero-eyebrow { font-size: 10px; letter-spacing: 0.24em; margin-bottom: 16px; }
   .hero-title { font-size: clamp(42px, 11vw, 60px); margin-bottom: 16px; }

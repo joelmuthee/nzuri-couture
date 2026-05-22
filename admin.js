@@ -1,5 +1,5 @@
 // Nzuri Couture Admin
-const ADMIN_PASSWORD = 'nzuri-ekTxcf4';
+const ADMIN_PASSWORD = 'nzuri123';
 const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
 const ADMIN_TOKEN = atob('c25KemdBbFNPa3hib3o5cjNETnV2WW5reEkxOUVkYUxyVmxPeFhxQ0RIWQ==');
 

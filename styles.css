@@ -5,9 +5,9 @@
   --ink: #f2ece0;         /* warm cream — primary text on dark */
   --ink-soft: #cabfa8;    /* muted cream */
   --ink-faint: #8d8472;   /* faint taupe */
-  --gold: #d4af37;        /* champagne gold — matches the crown + wordmark */
-  --gold-deep: #b8902f;   /* deeper antique gold */
-  --gold-light: #ecd591;  /* light champagne highlight */
+  --gold: #c8a96a;        /* antique champagne gold — sampled from the logo emblem */
+  --gold-deep: #9a7c3c;   /* deeper bronze — logo shadow tone */
+  --gold-light: #e7d4a2;  /* light champagne — logo highlight */
   --line: #29251d;        /* dark warm divider */
   --surface: #1b1813;     /* elevated dark surface (hover) */
   --choco: #141210;       /* near-black warm (nav/hero base) */
@@ -1152,15 +1152,15 @@ body[style*="f8f6f2"] {
 }
 
 /* ---- Public site dark-theme component overrides ---- */
-.nav { background: rgba(10,9,8,0.92); border-bottom-color: rgba(212,175,55,0.22); }
+.nav { background: rgba(10,9,8,0.92); border-bottom-color: rgba(200,169,106,0.22); }
 .hero { background: linear-gradient(135deg, #0a0908 0%, #161210 50%, #0a0908 100%); }
 .hero::before {
   background:
-    radial-gradient(circle at 25% 35%, rgba(212,175,55,0.16), transparent 50%),
-    radial-gradient(circle at 75% 65%, rgba(212,175,55,0.09), transparent 50%);
+    radial-gradient(circle at 25% 35%, rgba(200,169,106,0.16), transparent 50%),
+    radial-gradient(circle at 75% 65%, rgba(200,169,106,0.09), transparent 50%);
 }
-.btn-ghost { border-color: rgba(212,175,55,0.5); color: var(--gold-light); }
-.btn-ghost:hover { background: rgba(212,175,55,0.12); border-color: var(--gold); }
+.btn-ghost { border-color: rgba(200,169,106,0.5); color: var(--gold-light); }
+.btn-ghost:hover { background: rgba(200,169,106,0.12); border-color: var(--gold); }
 
 /* Inputs + surfaces that hardcoded white in the light template */
 .search-wrap input, #searchInput { background: var(--surface); color: var(--ink); border-color: var(--line); }
@@ -1170,14 +1170,14 @@ body[style*="f8f6f2"] {
 
 /* Primary / active fills → champagne gold with near-black text (logo language) */
 .pill.active { background: var(--gold); color: var(--choco-deep); border-color: var(--gold); }
-.btn-card { border-color: rgba(212,175,55,0.32); }
-.btn-card:hover:not(:disabled) { background: rgba(212,175,55,0.12); color: var(--gold-light); border-color: var(--gold); }
+.btn-card { border-color: rgba(200,169,106,0.32); }
+.btn-card:hover:not(:disabled) { background: rgba(200,169,106,0.12); color: var(--gold-light); border-color: var(--gold); }
 .btn-card.primary { background: var(--gold); color: var(--choco-deep); border-color: var(--gold); }
 .btn-card.primary:hover:not(:disabled) { background: var(--gold-light); color: var(--choco-deep); border-color: var(--gold-light); }
 .btn-card.soldout { background: var(--surface); color: var(--ink-soft); border-color: var(--line); }
-.btn-card.soldout:hover { background: rgba(212,175,55,0.1); color: var(--gold-light); border-color: var(--gold); }
+.btn-card.soldout:hover { background: rgba(200,169,106,0.1); color: var(--gold-light); border-color: var(--gold); }
 .pager-btn.active { background: var(--gold); color: var(--choco-deep); border-color: var(--gold); cursor: default; }
-.pager-btn:hover:not(.disabled):not(.active):not(.ellipsis) { background: rgba(212,175,55,0.14); border-color: var(--gold); color: var(--gold-light); }
+.pager-btn:hover:not(.disabled):not(.active):not(.ellipsis) { background: rgba(200,169,106,0.14); border-color: var(--gold); color: var(--gold-light); }
 .size-chips.pickable .size-chip.selected, .size-chip.selected { background: var(--gold); color: var(--choco-deep); border-color: var(--gold); }
 .search-clear:hover { background: var(--gold); color: var(--choco-deep); }
 .steps li::before { background: var(--gold); color: var(--choco-deep); }

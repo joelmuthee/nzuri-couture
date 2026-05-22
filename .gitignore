@@ -1,0 +1,13 @@
+worker/node_modules/
+.claude/
+.wrangler/
+node_modules/
+.tmp/
+*.log
+.DS_Store
+Thumbs.db
+.playwright-mcp/
+mobile-*.png
+.firecrawl/
+.secrets_tmp/
+worker/.secrets_tmp/

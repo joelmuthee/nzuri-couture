@@ -129,23 +129,47 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
     return hasSales;
   }
 
-  function whatsappLink(item, soldOut, selectedSize) {
-    const phone = settings.whatsappNumber || '254717029815';
+  // Message text only — no raw image URL. On mobile the actual photo is attached
+  // via the Web Share API (tryShareWithImage); desktop falls back to this clean text.
+  function enquireMessage(item, soldOut, selectedSize) {
     const avail = availSizes(item);
     let sizePart = '';
     if (!soldOut) {
       if (selectedSize) sizePart = ` (size ${selectedSize})`;
       else if (avail.length === 1) sizePart = ` (size ${avail[0]})`;
-      // multi-size with nothing selected → no size in URL; click handler should block before reaching here
     }
     const pricePart = item.price > 0 ? ` (${fmtPrice(item.price)})` : '';
-    const body = soldOut
+    return soldOut
       ? `Hi Nzuri Couture! I saw *${item.name}* is sold out. Will it be back in stock? I'd love to reserve one.`
       : `Hi Nzuri Couture! I'd like to enquire about *${item.name}*${sizePart}${pricePart} from your catalog.`;
-    // Append the item's image URL so WhatsApp fetches it and shows a preview thumbnail of the product.
+  }
+
+  function whatsappLink(item, soldOut, selectedSize) {
+    const phone = settings.whatsappNumber || '254794687724';
+    return `https://wa.me/${phone}?text=${encodeURIComponent(enquireMessage(item, soldOut, selectedSize))}`;
+  }
+
+  // Mobile: attach the real product photo to the WhatsApp message via the native
+  // share sheet. The worker's /img/<file> serves CORS + image/jpeg, so we can fetch
+  // it as a blob and hand WhatsApp a real File. Returns false to fall back to wa.me.
+  async function tryShareWithImage(item, message) {
+    if (!navigator.canShare || !navigator.share) return false;
     const imgUrl = item.image || (item.images && item.images[0]) || '';
-    const msg = imgUrl ? `${body}\n\n${imgUrl}` : body;
-    return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+    if (!imgUrl) return false;
+    try {
+      const res = await fetch(imgUrl + '?' + IMG_VERSION, { mode: 'cors' });
+      if (!res.ok) return false;
+      const blob = await res.blob();
+      const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+      const file = new File([blob], `${(item.name || 'item').replace(/[^a-z0-9]+/gi, '_')}.${ext}`, { type: blob.type });
+      if (!navigator.canShare({ files: [file] })) return false;
+      // WA Android occasionally drops the text param — pre-copy so the buyer can paste.
+      try { await navigator.clipboard.writeText(message); } catch (_) {}
+      await navigator.share({ files: [file], text: message, title: item.name });
+      return true;
+    } catch (err) {
+      return false; // cancelled or unsupported → wa.me fallback
+    }
   }
 
   function showToast(msg) {
@@ -461,7 +485,7 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
     wrap.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === cur));
   }
 
-  gallery.addEventListener('click', e => {
+  gallery.addEventListener('click', async e => {
     // Wishlist toggle
     const heart = e.target.closest('[data-wishlist]');
     if (heart) {
@@ -497,6 +521,7 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
       if (!item) return;
       const soldOut = isSoldOut(item);
       const avail = availSizes(item);
+      let selectedSize = null;
       // Require size selection when multiple sizes exist and item isn't sold out
       if (!soldOut && avail.length > 1) {
         const selected = card.querySelector('.size-chip.selected');
@@ -509,10 +534,20 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
           setTimeout(() => chips?.classList.remove('shake'), 600);
           return;
         }
-        // Override the href with the size-specific URL
-        enquire.href = whatsappLink(item, false, selected.dataset.size);
+        selectedSize = selected.dataset.size;
+      } else if (!soldOut && avail.length === 1) {
+        selectedSize = avail[0];
       }
+      enquire.href = whatsappLink(item, soldOut, selectedSize);
       track('itemEnquiries', id);
+      // Mobile: attach the actual product photo via the native share sheet so the
+      // buyer sends a real image (no raw URL in the text). Fall back to wa.me.
+      const isMobile = matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+      if (isMobile && navigator.canShare) {
+        e.preventDefault();
+        const shared = await tryShareWithImage(item, enquireMessage(item, soldOut, selectedSize));
+        if (!shared) window.open(enquire.href, '_blank', 'noopener');
+      }
     }
     const igClick = e.target.closest('.btn-card.ig');
     if (igClick) {
@@ -620,7 +655,7 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
     e.preventDefault();
     const items_saved = items.filter(i => wishlist.has(i.id));
     if (!items_saved.length) return;
-    const phone = settings.whatsappNumber || '254717029815';
+    const phone = settings.whatsappNumber || '254794687724';
     const lines = items_saved.map((i, idx) => `${idx + 1}. *${i.name}*${i.price > 0 ? ' (' + fmtPrice(i.price) + ')' : ''}`);
     const msg = `Hi Nzuri Couture! I'd like to enquire about these saved items:\n\n${lines.join('\n')}\n\nAre they available?`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');

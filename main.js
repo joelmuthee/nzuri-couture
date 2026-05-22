@@ -146,7 +146,12 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
 
   function whatsappLink(item, soldOut, selectedSize) {
     const phone = settings.whatsappNumber || '254794687724';
-    return `https://wa.me/${phone}?text=${encodeURIComponent(enquireMessage(item, soldOut, selectedSize))}`;
+    const body = enquireMessage(item, soldOut, selectedSize);
+    // Append the item's share page — WhatsApp previews it as a card with the
+    // product photo + name + price. Still opens straight to WhatsApp (no app picker).
+    const shareUrl = item.id ? `${API_BASE}/p/${encodeURIComponent(item.id)}` : '';
+    const msg = shareUrl ? `${body}\n\n${shareUrl}` : body;
+    return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
   }
 
   function showToast(msg) {

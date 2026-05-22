@@ -83,7 +83,7 @@ img { max-width: 100%; display: block; }
   width: min(1200px, 92%); margin: 0 auto; padding: 14px 0;
 }
 .brand { display: flex; align-items: center; gap: 12px; color: #fff; }
-.brand-logo { height: 78px; width: auto; max-width: 320px; display: block; object-fit: contain; }
+.brand-logo { height: 60px; width: auto; max-width: 320px; display: block; object-fit: contain; }
 .nav-links { display: flex; gap: 32px; align-items: center; }
 .nav-links a { color: #f0e9d8; font-size: 14px; font-weight: 500; letter-spacing: 0.02em; transition: color 0.2s; }
 .nav-links a:hover { color: var(--gold); }

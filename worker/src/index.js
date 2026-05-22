@@ -389,15 +389,16 @@ async function classifyPostWithVision(env, caption, imageUrl) {
 1. Is this a single product (one specific item or one stocked SKU) for sale? (is_product true|false)
 2. What is it? (name — short and descriptive, e.g. "Belted Shimmer Jumpsuit", "Pleated Skater Skirt", or "New Item" if unclear)
 3. What category? Pick EXACTLY one from this list, never invent another:
-   Dresses, Tops, Skirts, Trousers, Jumpsuits, Two-Piece Sets, Outerwear, Knitwear, Shoes, Bags, Accessories
+   Dresses, Tops, Skirts, Trousers, Shorts, Jumpsuits, Two-Piece Sets, Outerwear, Knitwear, Shoes, Bags, Accessories
 
 Category guide:
 - Dresses: one-piece dresses and gowns (bodycon, skater, maxi, midi, mini).
 - Tops: blouses, shirts, crop tops, camisoles, bodysuits, tees.
 - Skirts: any standalone skirt (mini, midi, maxi, pleated, pencil).
-- Trousers: standalone bottoms — trousers, pants, jeans, leggings, culottes.
+- Trousers: standalone full-length bottoms (trousers, pants, jeans, leggings, culottes).
+- Shorts: standalone short bottoms (denim, tailored, biker). NOT trousers.
 - Jumpsuits: one-piece jumpsuits, rompers, playsuits, catsuits.
-- Two-Piece Sets: matching top + bottom co-ord sets sold together.
+- Two-Piece Sets: matching top + bottom sold together. A "pants set" or "short set" is a Two-Piece Set, NOT Trousers/Shorts.
 - Outerwear: jackets, blazers, coats, trench coats worn as a layer.
 - Knitwear: sweaters, jumpers, knit tops, cardigans, cable knits.
 - Shoes: heels, sandals, flats, boots, sneakers, mules — any footwear.
@@ -456,7 +457,7 @@ async function classifyPostWithAi(env, caption) {
 Reply with strict minified JSON only, no prose, no code fences.
 
 Schema:
-{"is_product": true|false, "name": "<short descriptive name>", "category": "<exactly one of: Dresses, Tops, Skirts, Trousers, Jumpsuits, Two-Piece Sets, Outerwear, Knitwear, Shoes, Bags, Accessories>", "reason": "<3-6 words>"}
+{"is_product": true|false, "name": "<short descriptive name>", "category": "<exactly one of: Dresses, Tops, Skirts, Trousers, Shorts, Jumpsuits, Two-Piece Sets, Outerwear, Knitwear, Shoes, Bags, Accessories>", "reason": "<3-6 words>"}
 
 Rules:
 - is_product = true when the caption names a clothing / footwear / bag / accessory item, usually with a size signal (S, M, L, XL, "size 38") or a price.
@@ -490,7 +491,7 @@ Caption: """${trimmed}"""`;
 // Nzuri Couture sells women's clothing, shoes, bags + accessories. Coerce any
 // AI-suggested category outside the allowed list to the closest legal option or null.
 const COUTURE_CATEGORIES = new Set([
-  "Dresses","Tops","Skirts","Trousers","Jumpsuits","Two-Piece Sets",
+  "Dresses","Tops","Skirts","Trousers","Shorts","Jumpsuits","Two-Piece Sets",
   "Outerwear","Knitwear","Shoes","Bags","Accessories",
 ]);
 function coerceCategory(c) {
@@ -498,12 +499,14 @@ function coerceCategory(c) {
   const raw = String(c).trim();
   if (COUTURE_CATEGORIES.has(raw)) return raw;
   const lower = raw.toLowerCase();
+  // "...set" / co-ord first so "pants set" / "short set" don't fall into Trousers/Shorts
+  if (/^(two[\s\-]?piece(s)?|2[\s\-]?piece(s)?|co[\s\-]?ords?|sets?|matching\s*sets?|pants?\s*set|short\s*set|skirt\s*set)$/i.test(lower)) return "Two-Piece Sets";
   if (/^(dress(es)?|gowns?|bodycon|frocks?)$/i.test(lower)) return "Dresses";
   if (/^(tops?|blouses?|shirts?|crop\s*tops?|camis(oles?)?|bodysuits?|tees?|t[\s\-]?shirts?)$/i.test(lower)) return "Tops";
   if (/^skirts?$/i.test(lower)) return "Skirts";
+  if (/^shorts?$/i.test(lower)) return "Shorts";
   if (/^(trousers?|pants?|jeans?|leggings?|culottes?|bottoms?|slacks?)$/i.test(lower)) return "Trousers";
   if (/^(jumpsuits?|rompers?|playsuits?|catsuits?|overalls?|dungarees?)$/i.test(lower)) return "Jumpsuits";
-  if (/^(two[\s\-]?piece(s)?|2[\s\-]?piece(s)?|co[\s\-]?ords?|sets?|matching\s*sets?)$/i.test(lower)) return "Two-Piece Sets";
   if (/^(outerwear|jackets?|blazers?|coats?|trench(\s*coats?)?|bombers?|parkas?|puffers?)$/i.test(lower)) return "Outerwear";
   if (/^(knitwear|sweaters?|jumpers?|cardigans?|knits?|pullovers?|hoodies?|sweatshirts?)$/i.test(lower)) return "Knitwear";
   if (/^(shoes?|heels?|sandals?|flats?|boots?|sneakers?|trainers?|mules?|wedges?|pumps?|stilettos?|loafers?)$/i.test(lower)) return "Shoes";

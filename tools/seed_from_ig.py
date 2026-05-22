@@ -82,11 +82,14 @@ def smart_title(s):
 def categorize(text):
     # Prefix matches (no trailing \b) so plurals like "hats", "shoes", "dresses" hit.
     t = text.lower()
-    if re.search(r'\b(two\s*piece|2\s*piece|co-?ord|matching set)', t): return 'Two-Piece Sets'
+    # "...set" / "co-ord" / "pants set" / "short set" = a two-piece, NOT trousers/shorts.
+    if re.search(r'\b(two\s*piece|2\s*piece|co-?ord|matching set|pants? set|short set|skirt set|trouser set|\bset\b)', t): return 'Two-Piece Sets'
     if re.search(r'\b(jumpsuit|romper|playsuit|catsuit|dungaree)', t): return 'Jumpsuits'
     if re.search(r'\b(dress|gown|bodycon|frock|kaftan|abaya)', t): return 'Dresses'
     if re.search(r'\bskirt', t): return 'Skirts'
-    if re.search(r'\b(trouser|pant|jean|legging|culotte|cargo|short|skort)', t): return 'Trousers'
+    # Shorts get their OWN category (they are not trousers). Avoid "short sleeve".
+    if re.search(r'\bshorts\b', t) or re.search(r'\bshort\b(?!\s*sleeve)', t): return 'Shorts'
+    if re.search(r'\b(trouser|pant|jean|legging|culotte|cargo|slack|skort)', t): return 'Trousers'
     if re.search(r'\b(blazer|coat|jacket|trench|bomber|kimono)', t): return 'Outerwear'
     if re.search(r'\b(sweater|knit|jumper|pullover|cardigan)', t): return 'Knitwear'
     if re.search(r'\b(shoe|heel|sandal|boot|sneaker|mule|wedge|pump|loafer|flats?\b)', t): return 'Shoes'

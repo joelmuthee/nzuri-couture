@@ -1244,3 +1244,34 @@ body[style*="f8f6f2"] {
   background: rgba(10,9,8,0.82); color: var(--gold-light);
   max-width: calc(100% - 28px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+
+/* ===== SALE / MARKDOWN ===== */
+/* On-Sale filter pill — red accent so it stands out from the gold filter row. */
+.pill-sale { border-color: rgba(192,57,43,0.55); color: #e8796d; }
+.pill-sale:hover { border-color: #c0392b; color: #ff8d7e; background: rgba(192,57,43,0.12); }
+.pill-sale.active { background: #c0392b; border-color: #c0392b; color: #fff; }
+/* SALE ribbon — red, top-left. A card is never both sold-out and on-sale, and NEW
+   is suppressed while on sale, so the top-left corner never double-stacks. */
+.badge-sale {
+  position: absolute; top: 14px; left: 14px;
+  background: #c0392b; color: #fff;
+  font-size: 11px; letter-spacing: 0.2em; padding: 6px 12px; border-radius: 4px;
+  font-weight: 700; text-transform: uppercase;
+  box-shadow: 0 4px 14px rgba(192,57,43,0.5); z-index: 2;
+}
+/* Card sale pricing: original struck-through, sale price in red, a -X% pill. */
+.card-price-was {
+  font-family: var(--serif); font-size: 17px; font-weight: 500;
+  color: var(--ink-faint); text-decoration: line-through;
+  text-decoration-color: rgba(141,132,114,0.7); margin-right: 8px;
+}
+.card-price-sale { color: #ff6b5b; }
+.price-off {
+  font-family: var(--sans); font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  color: #fff; background: #c0392b; border-radius: 999px; padding: 3px 8px;
+  align-self: center; margin-left: 8px;
+}
+/* "Only N left" badge -> bottom-RIGHT so it never overlaps the bottom-left category badge. */
+.badge-low { left: auto; right: 14px; }
+/* Admin bulk-sale modal: discount-mode toggle active state (admin is light-pinned). */
+.sale-mode-btn.active { background: var(--ink); color: var(--gold-light); border-color: var(--ink); }

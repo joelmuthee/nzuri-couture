@@ -417,6 +417,15 @@ async function saveItem() {
   if (!name) { showToast('Item name is required.'); return; }
   if (isNaN(price) || price < 0) { showToast('Price must be a number (or leave blank for "Price on request").'); return; }
 
+  // Sale price (markdown): optional, must be a positive number below the price.
+  const salePriceRaw = document.getElementById('itemSalePriceInput').value.trim();
+  let itemSalePrice = null;
+  if (salePriceRaw !== '') {
+    itemSalePrice = parseInt(salePriceRaw, 10);
+    if (isNaN(itemSalePrice) || itemSalePrice <= 0) { showToast('Sale price must be a positive number, or leave it blank.'); return; }
+    if (itemSalePrice >= price) { showToast('Sale price must be lower than the regular price.'); return; }
+  }
+
   setSaving(true);
   try {
     let imagePath = null;
@@ -443,6 +452,7 @@ async function saveItem() {
       bag.category = category;
       bag.description = desc;
       bag.price = price;
+      if (itemSalePrice) bag.salePrice = itemSalePrice; else delete bag.salePrice;
       bag.stock = { ...bag.stock, ...stock };
       // On edit, additional images = whatever is currently in stagedExtras (which we pre-populated from the bag)
       bag.images = extraUrls.length ? [imagePath || bag.image, ...extraUrls] : (imagePath ? [imagePath] : (bag.images || []));
@@ -462,6 +472,7 @@ async function saveItem() {
       if (!stagedImage) { showToast('Add an item image.'); setSaving(false); return; }
       const id = 'item_' + Date.now();
       const newBag = { id, name, category, description: desc, price, stock, sales: [], image: imagePath, createdAt: new Date().toISOString() };
+      if (itemSalePrice) newBag.salePrice = itemSalePrice;
       if (extraUrls.length) newBag.images = [imagePath, ...extraUrls];
       if (stagedInstagramUrl) newBag.instagramUrl = stagedInstagramUrl;
       bags.unshift(newBag);
@@ -487,6 +498,7 @@ function resetForm() {
   document.getElementById('categoryInput').value = '';
   document.getElementById('descInput').value = '';
   document.getElementById('priceInput').value = '';
+  document.getElementById('itemSalePriceInput').value = '';
   clearStockForm();
   imageInput.value = '';
   imagePreview.innerHTML = '';
@@ -516,6 +528,7 @@ function editItem(id) {
   document.getElementById('categoryInput').value = bag.category || '';
   document.getElementById('descInput').value = bag.description || '';
   document.getElementById('priceInput').value = bag.price;
+  document.getElementById('itemSalePriceInput').value = bag.salePrice || '';
   setStockToForm(bag.stock || {});
   stagedImage = null;
   imagePreview.innerHTML = `<img src="${bag.image}" style="max-width:180px;border-radius:8px;">`;
@@ -583,7 +596,8 @@ function openSaleModal(id) {
     const opt = document.createElement('option'); opt.value = 'One size'; opt.textContent = 'One size'; saleSizeInput.appendChild(opt);
   }
   saleQtyInput.value = 1;
-  salePriceInput.value = bag.price;
+  // Default to the markdown price if the item is on sale, so the recorded sale captures the discount.
+  salePriceInput.value = (bag.salePrice > 0 && bag.salePrice < bag.price) ? bag.salePrice : bag.price;
   buyerName.value = '';
   buyerPhone.value = '';
   buyerNotes.value = '';
@@ -928,7 +942,11 @@ function renderList() {
       <div class="admin-card-body">
         <div class="admin-card-name">${escapeHtml(bag.name)}</div>
         ${bag.category ? `<div class="admin-card-cat-row" style="margin:3px 0;"><span style="background:#f0ede8;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;">${escapeHtml(bag.category)}</span></div>` : ''}
-        <div class="admin-card-price">${fmtKsh(bag.price)}<span class="admin-card-mobile-stock"> · ${units} in stock</span></div>
+        <div class="admin-card-price">${
+          (bag.salePrice > 0 && bag.salePrice < bag.price)
+            ? `<s style="color:#999;font-weight:400;">${fmtKsh(bag.price)}</s> <span style="color:#c0392b;font-weight:700;">${fmtKsh(bag.salePrice)}</span> <span style="color:#c0392b;font-weight:700;">· SALE</span>`
+            : fmtKsh(bag.price)
+        }<span class="admin-card-mobile-stock"> · ${units} in stock</span></div>
         <div class="admin-card-stock">${units} in stock · ${sold} sold | ${stockSummary}</div>
         <div class="admin-card-actions">
           <button onclick="editItem('${bag.id}')">Edit</button>
@@ -1000,6 +1018,67 @@ async function bulkSetCategory() {
     showToast('Sync failed: ' + err.message);
   }
 }
+
+// ====== BULK SALE (markdown) ======
+// Round to the nearest 50 KSh so sale prices look clean. Nairobi pricing is 50/100s.
+function roundTo50(n) { return Math.max(50, Math.round(n / 50) * 50); }
+
+window.bulkPutOnSale = () => {
+  if (!bulkSelected.size) return;
+  document.getElementById('bulkSaleCount').textContent = bulkSelected.size;
+  document.getElementById('bulkSalePct').value = '';
+  document.getElementById('bulkSaleFixed').value = '';
+  setSaleMode('pct');
+  document.getElementById('bulkSaleModal').style.display = 'flex';
+};
+
+function setSaleMode(mode) {
+  document.querySelectorAll('.sale-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.saleMode === mode));
+  document.getElementById('bulkSalePctField').style.display = mode === 'pct' ? '' : 'none';
+  document.getElementById('bulkSaleFixedField').style.display = mode === 'fixed' ? '' : 'none';
+}
+document.querySelectorAll('.sale-mode-btn').forEach(btn => btn.addEventListener('click', () => setSaleMode(btn.dataset.saleMode)));
+document.getElementById('bulkSaleCancelBtn')?.addEventListener('click', () => { document.getElementById('bulkSaleModal').style.display = 'none'; });
+document.getElementById('bulkSaleSaveBtn')?.addEventListener('click', async () => {
+  const mode = document.querySelector('.sale-mode-btn.active')?.dataset.saleMode || 'pct';
+  const ids = new Set(bulkSelected);
+  let pct = null, fixed = null;
+  if (mode === 'pct') {
+    pct = parseInt(document.getElementById('bulkSalePct').value, 10);
+    if (!pct || pct < 1 || pct > 90) { showToast('Enter a percent between 1 and 90.'); return; }
+  } else {
+    fixed = parseInt(document.getElementById('bulkSaleFixed').value, 10);
+    if (!fixed || fixed <= 0) { showToast('Enter a valid sale price.'); return; }
+  }
+  document.getElementById('bulkSaleModal').style.display = 'none';
+  let applied = 0, skipped = 0;
+  bags.forEach(b => {
+    if (!ids.has(b.id) || !(b.price > 0)) return; // can't discount "price on request"
+    const sp = mode === 'pct' ? roundTo50(Number(b.price) * (1 - pct / 100)) : fixed;
+    if (sp < Number(b.price)) { b.salePrice = sp; applied++; } else { skipped++; }
+  });
+  if (!applied) { showToast('No items updated, sale price was not below their price.'); return; }
+  try {
+    await apiPublish();
+    bulkSelected.clear();
+    renderList(); renderInventory(); renderDashboard();
+    showToast(`On sale: ${applied} item${applied === 1 ? '' : 's'}${skipped ? ` · ${skipped} skipped` : ''}.`);
+  } catch (err) { showToast('Sync failed: ' + err.message); }
+});
+
+window.bulkRemoveSale = async () => {
+  if (!bulkSelected.size) return;
+  const ids = new Set(bulkSelected);
+  let n = 0;
+  bags.forEach(b => { if (ids.has(b.id) && b.salePrice != null) { delete b.salePrice; n++; } });
+  if (!n) { showToast('None of the selected items were on sale.'); return; }
+  try {
+    await apiPublish();
+    bulkSelected.clear();
+    renderList(); renderInventory(); renderDashboard();
+    showToast(`Removed sale from ${n} item${n === 1 ? '' : 's'}.`);
+  } catch (err) { showToast('Sync failed: ' + err.message); }
+};
 
 
 // ====== TRASH (device-local restore bin) ======

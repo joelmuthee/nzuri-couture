@@ -129,6 +129,14 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
     return hasSales;
   }
 
+  // Markdown / sale: on sale when salePrice is set, > 0, below price, and not sold
+  // out. effectivePrice = what the buyer pays now; discountPct = the % off.
+  function isOnSale(item) {
+    return !isSoldOut(item) && Number(item.salePrice) > 0 && Number(item.salePrice) < Number(item.price);
+  }
+  function effectivePrice(item) { return isOnSale(item) ? Number(item.salePrice) : Number(item.price || 0); }
+  function discountPct(item) { return Math.round((1 - Number(item.salePrice) / Number(item.price)) * 100); }
+
   // Clean message text — product name + size + price, no raw URL. Opens straight
   // to WhatsApp via wa.me (no share sheet).
   function enquireMessage(item, soldOut, selectedSize) {
@@ -138,7 +146,9 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
       if (selectedSize) sizePart = ` (size ${selectedSize})`;
       else if (avail.length === 1) sizePart = ` (size ${avail[0]})`;
     }
-    const pricePart = item.price > 0 ? ` (${fmtPrice(item.price)})` : '';
+    const pricePart = isOnSale(item)
+      ? ` (on sale ${fmtPrice(item.salePrice)}, was ${fmtPrice(item.price)})`
+      : (item.price > 0 ? ` (${fmtPrice(item.price)})` : '');
     return soldOut
       ? `Hi Nzuri Couture! I saw *${item.name}* is sold out. Will it be back in stock? I'd love to reserve one.`
       : `Hi Nzuri Couture! I'd like to enquire about *${item.name}*${sizePart}${pricePart} from your catalog.`;
@@ -265,15 +275,19 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
 
     let filtered = items.filter(item => {
       const soldOut = isSoldOut(item);
-      const availOk = currentAvail === 'all' || (currentAvail === 'sold' ? soldOut : !soldOut);
+      const availOk =
+        currentAvail === 'all' ? true
+        : currentAvail === 'sold' ? soldOut
+        : currentAvail === 'sale' ? isOnSale(item)
+        : !soldOut; // 'available'
       const catOk = currentCat === 'all' || item.category === currentCat;
       return availOk && catOk && sizeMatch(item) && searchMatch(item);
     });
 
-    // Sort
+    // Sort — price sorts use the effective (sale) price
     if (currentSort === 'newest')      filtered.sort((a, b) => itemTimestamp(b) - itemTimestamp(a));
-    else if (currentSort === 'priceAsc')  filtered.sort((a, b) => (a.price || 0) - (b.price || 0));
-    else if (currentSort === 'priceDesc') filtered.sort((a, b) => (b.price || 0) - (a.price || 0));
+    else if (currentSort === 'priceAsc')  filtered.sort((a, b) => effectivePrice(a) - effectivePrice(b));
+    else if (currentSort === 'priceDesc') filtered.sort((a, b) => effectivePrice(b) - effectivePrice(a));
     // 'default' keeps IG feed order (the natural array order)
 
     const availCount = items.filter(i => !isSoldOut(i)).length;
@@ -292,6 +306,7 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
 
     gallery.innerHTML = visible.map(item => {
       const soldOut = isSoldOut(item);
+      const onSale = isOnSale(item);
       const avail = availSizes(item);
       const pickRequired = !soldOut && avail.length > 1;
       const sizesHtml = avail.length
@@ -315,7 +330,8 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
           ${dots}
           ${arrows}
           ${soldOut ? '<span class="badge-sold">Sold out</span>' : ''}
-          ${!soldOut && isNewItem ? '<span class="badge-new">NEW</span>' : ''}
+          ${onSale ? '<span class="badge-sale">SALE</span>' : ''}
+          ${!soldOut && !onSale && isNewItem ? '<span class="badge-new">NEW</span>' : ''}
           ${lowStock ? `<span class="badge-low">Only ${totalUnits} left</span>` : ''}
           ${catBadge}
           <button class="heart-btn ${saved ? 'saved' : ''}" data-wishlist="${escapeHtml(item.id)}" aria-label="${saved ? 'Remove from saved' : 'Save item'}" title="${saved ? 'Saved' : 'Save for later'}">
@@ -328,7 +344,9 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
           <p class="card-desc">${escapeHtml(item.description || '')}</p>
           ${sizesHtml}
           <div class="card-price-row">
-            <span class="card-price">${item.price > 0 ? fmtPrice(item.price) : '<small style="font-style:italic;font-size:14px;">Price on request</small>'}</span>
+            ${onSale
+              ? `<span class="card-price-was">${fmtPrice(item.price)}</span><span class="card-price card-price-sale">${fmtPrice(item.salePrice)}</span><span class="price-off">-${discountPct(item)}%</span>`
+              : `<span class="card-price">${item.price > 0 ? fmtPrice(item.price) : '<small style="font-style:italic;font-size:14px;">Price on request</small>'}</span>`}
             ${avail.length ? '<a class="size-guide-link" data-action="size-guide">Size guide</a>' : ''}
           </div>
           <div class="card-actions">
@@ -566,7 +584,10 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
     // Start at the slide the card is currently showing
     const carousel = wrap.querySelector('.card-carousel');
     lightboxIndex = carousel ? parseInt(carousel.dataset.current, 10) || 0 : 0;
-    lightboxCap.dataset.baseCaption = `${item.name}${item.price > 0 ? ' · ' + fmtPrice(item.price) : ''}${isSoldOut(item) ? ' · SOLD OUT' : ''}`;
+    const lbPrice = isOnSale(item)
+      ? `${fmtPrice(item.salePrice)} (was ${fmtPrice(item.price)})`
+      : (item.price > 0 ? fmtPrice(item.price) : '');
+    lightboxCap.dataset.baseCaption = `${item.name}${lbPrice ? ' · ' + lbPrice : ''}${isSoldOut(item) ? ' · SOLD OUT' : isOnSale(item) ? ' · ON SALE' : ''}`;
     lightboxImg.alt = item.name;
     updateLightbox();
     lightbox.classList.add('open');

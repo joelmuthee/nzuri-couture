@@ -139,9 +139,12 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
   function effectivePrice(item) { return isOnSale(item) ? Number(item.salePrice) : Number(item.price || 0); }
   function discountPct(item) { return Math.round((1 - Number(item.salePrice) / Number(item.price)) * 100); }
 
-  // Clean message text — product name + size + price, no raw URL. Opens straight
-  // to WhatsApp via wa.me (no share sheet).
-  function enquireMessage(item, soldOut, selectedSize) {
+  function enquireImg(item) { return item.image || (item.images && item.images[0]) || ''; }
+
+  // Clean message body — product name + size + price, no raw URL. Shared as-is by
+  // the Tier-1 native share sheet; whatsappLink appends the /p/<id> share page for
+  // the Tier-2 wa.me fallback.
+  function enquireBody(item, soldOut, selectedSize) {
     const avail = availSizes(item);
     let sizePart = '';
     if (!soldOut) {
@@ -158,12 +161,36 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
 
   function whatsappLink(item, soldOut, selectedSize) {
     const phone = settings.whatsappNumber || '254794687724';
-    const body = enquireMessage(item, soldOut, selectedSize);
+    const body = enquireBody(item, soldOut, selectedSize);
     // Append the item's share page — WhatsApp previews it as a card with the
     // product photo + name + price. Still opens straight to WhatsApp (no app picker).
     const shareUrl = item.id ? `${API_BASE}/p/${encodeURIComponent(item.id)}` : '';
     const msg = shareUrl ? `${body}\n\n${shareUrl}` : body;
     return `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
+  }
+
+  // Tier 1 (mobile): share the actual product photo through the native share sheet so it
+  // arrives in WhatsApp as a real image attachment, not just a link that may not preview.
+  // Returns true if shared; false to fall back to the wa.me link.
+  async function tryShareWithImage(item, soldOut, selectedSize) {
+    if (!navigator.canShare || !navigator.share) return false;
+    const imgUrl = enquireImg(item);
+    if (!imgUrl) return false;
+    try {
+      const res = await fetch(imgUrl, { mode: 'cors' });
+      if (!res.ok) return false;
+      const blob = await res.blob();
+      const ext = (blob.type.split('/')[1] || 'jpg').replace('jpeg', 'jpg');
+      const file = new File([blob], `${item.name.replace(/[^a-z0-9]+/gi, '_')}.${ext}`, { type: blob.type });
+      if (!navigator.canShare({ files: [file] })) return false;
+      const message = enquireBody(item, soldOut, selectedSize);
+      try { await navigator.clipboard.writeText(message); } catch (_) { /* ignore */ }
+      await navigator.share({ files: [file], text: message, title: item.name });
+      return true;
+    } catch (_) {
+      // user cancelled or share failed — caller falls back to wa.me
+      return false;
+    }
   }
 
   function showToast(msg) {
@@ -487,7 +514,7 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
     wrap.querySelectorAll('.carousel-dot').forEach((d, i) => d.classList.toggle('active', i === cur));
   }
 
-  gallery.addEventListener('click', e => {
+  gallery.addEventListener('click', async e => {
     // Wishlist toggle
     const heart = e.target.closest('[data-wishlist]');
     if (heart) {
@@ -542,7 +569,14 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
       }
       enquire.href = whatsappLink(item, soldOut, selectedSize);
       track('itemEnquiries', id);
-      // The anchor's href opens wa.me directly — straight to WhatsApp, no app picker.
+      // Tier 1: on mobile, push the real photo via the native share sheet; fall back to wa.me.
+      const isMobile = matchMedia('(pointer: coarse)').matches || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+      if (isMobile && navigator.canShare) {
+        e.preventDefault();
+        const shared = await tryShareWithImage(item, soldOut, selectedSize);
+        if (!shared) window.open(enquire.href, '_blank', 'noopener');
+      }
+      // Otherwise the anchor's href opens wa.me directly (Tier 2) — straight to WhatsApp.
     }
     const igClick = e.target.closest('.btn-card.ig');
     if (igClick) {

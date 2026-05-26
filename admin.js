@@ -665,6 +665,81 @@ document.getElementById('saleSkipBtn').addEventListener('click', () => recordSal
 document.getElementById('saleCancelBtn').addEventListener('click', closeSaleModal);
 saleModal.addEventListener('click', e => { if (e.target === saleModal) closeSaleModal(); });
 
+// ====== EDIT / UNDO A RECORDED SALE ======
+// Sales are not append-only — owners misrecord (wrong size/qty/price) or a sale
+// falls through. Undo returns the quantity to stock; Edit corrects stock by the
+// difference. Neither re-sends to GHL. A sale is identified by bagId + soldAt.
+let editingSale = null; // { bagId, soldAt }
+
+async function undoSale(bagId, soldAt) {
+  if (!await confirmAction('Undo this sale? The quantity goes back into stock.', 'Undo sale')) return;
+  const bag = bags.find(b => b.id === bagId);
+  if (!bag) return;
+  const idx = (bag.sales || []).findIndex(x => x.soldAt === soldAt);
+  if (idx === -1) return;
+  const s = bag.sales[idx];
+  if (bag.stock && bag.stock[s.size] !== undefined) {
+    bag.stock[s.size] = (Number(bag.stock[s.size]) || 0) + (Number(s.qty) || 1);
+  }
+  bag.sales.splice(idx, 1);
+  try {
+    await apiPublish();
+    renderList();
+    renderDashboard();
+    renderInventory();
+    showToast('Sale undone, stock restored.');
+  } catch (err) { showToast('Error: ' + err.message); }
+}
+
+function openEditSale(bagId, soldAt) {
+  const bag = bags.find(b => b.id === bagId);
+  if (!bag) return;
+  const s = (bag.sales || []).find(x => x.soldAt === soldAt);
+  if (!s) return;
+  editingSale = { bagId, soldAt };
+  document.getElementById('editSaleTitle').textContent = `Edit sale: ${bag.name}`;
+  document.getElementById('editSaleSize').value = s.size || '';
+  document.getElementById('editSaleQty').value = s.qty || 1;
+  document.getElementById('editSalePrice').value = (s.salePrice != null ? s.salePrice : bag.price) || 0;
+  document.getElementById('editBuyerName').value = s.buyerName || '';
+  document.getElementById('editBuyerPhone').value = s.buyerPhone || '';
+  document.getElementById('editBuyerNotes').value = s.notes || '';
+  document.getElementById('editSaleModal').style.display = 'flex';
+}
+
+function closeEditSale() { document.getElementById('editSaleModal').style.display = 'none'; editingSale = null; }
+
+document.getElementById('editSaleSaveBtn').addEventListener('click', async () => {
+  if (!editingSale) return;
+  const bag = bags.find(b => b.id === editingSale.bagId);
+  if (!bag) return;
+  const s = (bag.sales || []).find(x => x.soldAt === editingSale.soldAt);
+  if (!s) return;
+  const newSize = document.getElementById('editSaleSize').value.trim() || s.size;
+  const newQty = parseInt(document.getElementById('editSaleQty').value, 10) || 1;
+  const newPrice = parseInt(document.getElementById('editSalePrice').value, 10) || bag.price;
+  // Correct stock: put the old quantity back, then take the new quantity out
+  if (bag.stock) {
+    if (bag.stock[s.size] !== undefined) bag.stock[s.size] = (Number(bag.stock[s.size]) || 0) + (Number(s.qty) || 1);
+    if (bag.stock[newSize] !== undefined) bag.stock[newSize] = Math.max(0, (Number(bag.stock[newSize]) || 0) - newQty);
+  }
+  s.size = newSize;
+  s.qty = newQty;
+  s.salePrice = newPrice;
+  s.buyerName = document.getElementById('editBuyerName').value.trim();
+  s.buyerPhone = document.getElementById('editBuyerPhone').value.trim();
+  s.notes = document.getElementById('editBuyerNotes').value.trim();
+  closeEditSale();
+  try {
+    await apiPublish();
+    renderList();
+    renderDashboard();
+    renderInventory();
+    showToast('Sale updated.');
+  } catch (err) { showToast('Error: ' + err.message); }
+});
+document.getElementById('editSaleCancelBtn').addEventListener('click', closeEditSale);
+
 // ====== RESTOCK MODAL ======
 const restockModal = document.getElementById('restockModal');
 const restockSizeInput = document.getElementById('restockSizeInput');
@@ -798,17 +873,24 @@ function renderDashboard() {
         </div>`).join('')
     : '<p style="color:#999;font-size:13px;">No sales yet — record your first sale to populate.</p>';
 
-  // Recent sales (all bags, last 6 individual sale records)
+  // Recent sales (all bags, last 20 individual sale records). Each row is editable
+  // (Edit / Undo) — sales are not append-only.
   const allSaleRecords = [];
   bags.forEach(bag => (bag.sales || []).forEach(s => allSaleRecords.push({ bag, s })));
-  const recent = allSaleRecords.sort((a, b) => new Date(b.s.soldAt) - new Date(a.s.soldAt)).slice(0, 6);
+  const recent = allSaleRecords.sort((a, b) => new Date(b.s.soldAt) - new Date(a.s.soldAt)).slice(0, 20);
   document.getElementById('recentSales').innerHTML = recent.length
     ? recent.map(({ bag, s }) => `
         <div class="recent-row">
-          <img src="${bag.image}" alt="${escapeHtml(bag.name)}">
-          <div>
-            <div class="recent-name">${escapeHtml(bag.name)} · ${escapeHtml(s.size || '')} × ${s.qty || 1}</div>
-            <div class="recent-meta">${fmtKsh(s.salePrice || bag.price)} · ${s.buyerName ? escapeHtml(s.buyerName) : 'No buyer saved'} · ${relTime(s.soldAt)}</div>
+          <div class="recent-main">
+            <img src="${bag.image}" alt="${escapeHtml(bag.name)}">
+            <div>
+              <div class="recent-name">${escapeHtml(bag.name)} · ${escapeHtml(s.size || '')} × ${s.qty || 1}</div>
+              <div class="recent-meta">${fmtKsh(s.salePrice || bag.price)} · ${s.buyerName ? escapeHtml(s.buyerName) : 'No buyer saved'} · ${relTime(s.soldAt)}</div>
+            </div>
+          </div>
+          <div class="recent-actions">
+            <button onclick="openEditSale('${bag.id}','${s.soldAt}')">Edit</button>
+            <button class="danger" onclick="undoSale('${bag.id}','${s.soldAt}')">Undo</button>
           </div>
         </div>`).join('')
     : '<p style="color:#999;font-size:13px;">No sales recorded yet.</p>';
@@ -1197,6 +1279,8 @@ async function emptyTrash() {
 window.editItem = editItem;
 window.deleteItem = deleteItem;
 window.openSaleModal = openSaleModal;
+window.undoSale = undoSale;
+window.openEditSale = openEditSale;
 window.openRestockModal = openRestockModal;
 window.bulkClear = bulkClear;
 window.bulkSelectAll = bulkSelectAll;

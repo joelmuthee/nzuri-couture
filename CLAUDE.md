@@ -30,6 +30,10 @@ OVERRIDE the standard. Do not revert them across sessions without Joel's explici
 6. **GHL buyer capture (`/api/buyer`) is intentionally DISABLED** — the template shipped Ryker's form/
    location IDs. Do NOT re-enable until a Nzuri GHL form exists (would file buyers into the wrong CRM).
 
+7. **No "View on IG" button on cards** (removed per owner). The global standard ships one on IG-sourced
+   catalogs, but the IG links aren't reliable for these items, so cards carry only the Enquire button.
+   Do NOT re-add the `btn-card ig` / "View on IG" link in `main.js`.
+
 ## Infra (Stawisystems CF account `58685495706b973821d77208248c66fc`)
 - Worker `nzuri-couture-api`; KV `nzuri-couture-bags` (id `b91f29983487476182b1acf14d28743b`); Pages
   project `nzuri-couture` (production branch `main`); repo `github.com/joelmuthee/nzuri-couture`

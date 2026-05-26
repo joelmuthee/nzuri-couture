@@ -359,7 +359,7 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
             <a class="btn-card primary${soldOut ? ' soldout' : ''}" href="${whatsappLink(item, soldOut)}" target="_blank" rel="noopener">
               ${WA_SVG} ${soldOut ? 'Sold out · notify me' : 'Enquire'}
             </a>
-            ${item.instagramUrl ? `<a class="btn-card ig" href="${item.instagramUrl}" target="_blank" rel="noopener" aria-label="View on Instagram">${IG_SVG} View on IG</a>` : ''}
+            <!-- "View on IG" button removed (see CLAUDE.md) — IG links not reliable for these items -->
           </div>
         </div>
       </article>`;

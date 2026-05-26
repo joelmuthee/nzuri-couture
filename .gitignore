@@ -11,3 +11,4 @@ mobile-*.png
 .firecrawl/
 .secrets_tmp/
 worker/.secrets_tmp/
+worker/.master-token

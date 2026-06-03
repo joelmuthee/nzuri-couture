@@ -1293,8 +1293,11 @@ body[style*="f8f6f2"] {
   color: #fff; background: #c0392b; border-radius: 999px; padding: 3px 8px;
   align-self: center; margin-left: 8px;
 }
-/* "Only N left" badge -> bottom-RIGHT so it never overlaps the bottom-left category badge. */
-.badge-low { left: auto; right: 14px; }
+/* "Only N left" badge -> TOP-RIGHT. Bottom-left is the category badge and
+   bottom-right is the heart pill, so the only free corner is top-right (top-left
+   holds NEW/SALE/SOLD, which never co-occur with each other). Previously this sat
+   bottom-right and the heart pill clipped it to "Or…". */
+.badge-low { left: auto; right: 14px; bottom: auto; top: 14px; }
 /* Admin bulk-sale modal: discount-mode toggle active state (admin is light-pinned). */
 .sale-mode-btn.active { background: var(--ink); color: var(--gold-light); border-color: var(--ink); }
 

@@ -678,6 +678,13 @@ export default {
       let body;
       try { body = await request.json(); } catch { return json({ error: "invalid json" }, 400); }
       if (!Array.isArray(body.bags)) return json({ error: "bags must be array" }, 400);
+      // Empty-publish guard (mandated by CATALOG-STANDARDS): reject a payload
+      // with bags.length === 0 unless the caller passes force: true. This
+      // prevents a stray "{bags:[]}" call from nuking the live catalog. A
+      // legitimate "wipe everything" still works by sending {bags:[], force:true}.
+      if (body.bags.length === 0 && body.force !== true) {
+        return json({ error: "empty publish blocked; pass force:true to confirm wipe" }, 400);
+      }
       const payload = {
         bags: body.bags,
         settings: body.settings || {},

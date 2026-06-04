@@ -177,7 +177,7 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
       : (item.price > 0 ? ` (${fmtPrice(item.price)})` : '');
     return soldOut
       ? `Hi Nzuri Couture! I saw *${item.name}* is sold out. Will it be back in stock? I'd love to reserve one.`
-      : `Hi Nzuri Couture! I'd like to enquire about *${item.name}*${sizePart}${pricePart} from your catalog.`;
+      : `Hi Nzuri Couture! I'd like to check availability of *${item.name}*${sizePart}${pricePart} from your catalog.`;
   }
 
   function whatsappLink(item, soldOut, selectedSize) {
@@ -378,7 +378,7 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
           </div>
           <div class="card-actions">
             <a class="btn-card primary${soldOut ? ' soldout' : ''}" href="${whatsappLink(item, soldOut)}" target="_blank" rel="noopener">
-              ${WA_SVG} ${soldOut ? 'Sold out · notify me' : 'Enquire'}
+              ${WA_SVG} ${soldOut ? 'Sold out · notify me' : 'Check availability'}
             </a>
             <!-- "View on IG" button removed (see CLAUDE.md) — IG links not reliable for these items -->
           </div>
@@ -683,7 +683,7 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
     if (!items_saved.length) return;
     const phone = settings.whatsappNumber || '254794687724';
     const lines = items_saved.map((i, idx) => `${idx + 1}. *${i.name}*${i.price > 0 ? ' (' + fmtPrice(i.price) + ')' : ''}`);
-    const msg = `Hi Nzuri Couture! I'd like to enquire about these saved items:\n\n${lines.join('\n')}\n\nAre they available?`;
+    const msg = `Hi Nzuri Couture! I'd like to check availability of these saved items:\n\n${lines.join('\n')}\n\nAre they available?`;
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
   });
 

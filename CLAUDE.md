@@ -31,8 +31,16 @@ OVERRIDE the standard. Do not revert them across sessions without Joel's explici
    location IDs. Do NOT re-enable until a Nzuri GHL form exists (would file buyers into the wrong CRM).
 
 7. **No "View on IG" button on cards** (removed per owner). The global standard ships one on IG-sourced
-   catalogs, but the IG links aren't reliable for these items, so cards carry only the Enquire button.
+   catalogs, but the IG links aren't reliable for these items, so cards carry only the primary button.
    Do NOT re-add the `btn-card ig` / "View on IG" link in `main.js`.
+
+8. **Button label = "Check availability" (NOT "Enquire").** Plain everyday language per the copy
+   standard, matches buyer intent for new-stock (availability per size). Sold-out variant stays
+   "Sold out · notify me". The WhatsApp message body matches: *"I'd like to check availability of
+   *<Item>*…"* (not "I'd like to enquire about…"). Same for the wishlist drawer ("Check availability
+   for all") and the How-to-buy step. Internal identifiers (`enquireBody`, `enquireImg`, the
+   `.btn-card.primary` selector, the `enquire` GA event name) stay as-is — DO NOT rename them when
+   updating the label, the visible text and the code symbols are intentionally decoupled.
 
 ## Infra (Stawisystems CF account `58685495706b973821d77208248c66fc`)
 - Worker `nzuri-couture-api`; KV `nzuri-couture-bags` (id `b91f29983487476182b1acf14d28743b`); Pages

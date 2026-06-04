@@ -244,7 +244,7 @@ function parseCaptionForBag(caption) {
     name: brand,
     category: category || null,
     stock,
-    description: "Hand-picked couture, styled with care. Photographed exactly as it is. Pick your size below to enquire.",
+    description: "Hand-picked couture, styled with care. Photographed exactly as it is. Pick your size below to check availability.",
   };
 }
 
@@ -601,7 +601,7 @@ export default {
       const img = item.image || (item.images && item.images[0]) || `${SITE}/images/og-image.jpg`;
       const price = item.price > 0 ? ` · Ksh ${Number(item.price).toLocaleString("en-US")}` : "";
       const title = esc(item.name + price);
-      const desc = esc((item.description || "Women's couture in Nairobi. Tap to view and enquire on WhatsApp.").slice(0, 160));
+      const desc = esc((item.description || "Women's couture in Nairobi. Tap to view and check availability on WhatsApp.").slice(0, 160));
       const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta property="og:type" content="product">
@@ -1052,7 +1052,7 @@ export default {
           id,
           name: (it.name || "New Item").slice(0, 80),
           category,
-          description: it.description || "Hand-picked couture, styled with care. Photographed exactly as it is. Pick your size below to enquire.",
+          description: it.description || "Hand-picked couture, styled with care. Photographed exactly as it is. Pick your size below to check availability.",
           price: (typeof it.price === "number" && it.price > 0) ? Math.round(it.price) : 0,
           stock,
           sales: [],

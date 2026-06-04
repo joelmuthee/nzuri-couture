@@ -435,8 +435,8 @@ function generateDescription(name, cat) {
     `Brand new, ready to wear.`,
   ];
   const closes = [
-    `Tap Enquire to chat with us on WhatsApp.`,
-    `Available sizes listed. Tap Enquire to confirm and pay.`,
+    `Tap Check availability to chat with us on WhatsApp.`,
+    `Available sizes listed. Tap Check availability to confirm and pay.`,
     `Visit us in Kilimani, Nairobi or we deliver.`,
   ];
   return [openers[Math.floor(Math.random() * openers.length)], mids[Math.floor(Math.random() * mids.length)], closes[Math.floor(Math.random() * closes.length)]].join(' ');
@@ -1880,7 +1880,7 @@ function buildBroadcastMessage(recipientName) {
     : '';
   const lookUrl = 'https://nzuricouture.co.ke';
   const greet = recipientName ? `Hi ${recipientName.split(' ')[0]}! ` : 'Hi! ';
-  return `${greet}It's Nzuri Couture, ${subject || 'fresh stock just landed'}.${itemsBlock}\n\nTap to browse: ${lookUrl}\n\nReply here to enquire. 🤍`;
+  return `${greet}It's Nzuri Couture, ${subject || 'fresh stock just landed'}.${itemsBlock}\n\nTap to browse: ${lookUrl}\n\nReply here to chat. 🤍`;
 }
 
 function renderBroadcastPreview() {

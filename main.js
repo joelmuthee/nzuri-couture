@@ -809,17 +809,18 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
   }
 
   // Billing kill-switch: when suspended, replace the whole page with a branded
-  // "closed for a short break" overlay instead of the catalog. Buyers never see
-  // a payment reason. Pulls logo, name, tagline + WhatsApp number from settings
+  // "currently offline" overlay instead of the catalog. Buyers never see a
+  // payment reason, and we never promise a return — the owner may settle the
+  // bill or move on. Pulls logo, name, tagline + WhatsApp number from settings
   // so the overlay stays on-brand without any per-client hardcoding.
   function showSuspended() {
     document.documentElement.style.overflow = 'hidden';
-    document.title = (settings.shopName || 'Nzuri Couture') + ' · Back soon';
+    document.title = (settings.shopName || 'Nzuri Couture') + ' · Offline';
 
     const shopName = settings.shopName || 'Nzuri Couture';
     const tagline = settings.tagline || '';
     const wa = (settings.whatsappNumber || '').replace(/\D/g, '');
-    const waMsg = encodeURIComponent("Hi " + shopName + "! When are you back online?");
+    const waMsg = encodeURIComponent("Hi " + shopName + "! I had a question about your shop.");
     const waLink = wa ? ('https://wa.me/' + wa + '?text=' + waMsg) : '';
     const logoUrl = 'images/logo-nav.jpg?v=2';
 
@@ -848,8 +849,8 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
       + '<div class="ns-name">' + shopName + '</div>'
       + (tagline ? '<div class="ns-tag">' + tagline + '</div>' : '<div style="height:30px"></div>')
       + '<div class="ns-rule"></div>'
-      + '<h1 class="ns-head">Closed for a short break</h1>'
-      + '<p class="ns-body">We\'ll be back in a moment. ' + (wa ? 'In the meantime, message us on WhatsApp and we\'ll get right back to you.' : 'Please check back soon.') + '</p>'
+      + '<h1 class="ns-head">This shop is currently offline</h1>'
+      + '<p class="ns-body">' + (wa ? 'For orders or questions, please message us on WhatsApp.' : 'Please check back later.') + '</p>'
       + (wa ? '<a class="ns-wa" href="' + waLink + '" target="_blank" rel="noopener">' + WA_SVG + ' Message us</a>' : '')
     );
     document.body.appendChild(o);

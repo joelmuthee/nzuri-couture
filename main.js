@@ -808,15 +808,50 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
     document.querySelectorAll('.fade-up').forEach(el => el.classList.add('in-view'));
   }
 
-  // Billing kill-switch: when suspended, replace the whole page with a neutral
-  // "offline" notice instead of the catalog. Buyers never see a payment reason.
+  // Billing kill-switch: when suspended, replace the whole page with a branded
+  // "closed for a short break" overlay instead of the catalog. Buyers never see
+  // a payment reason. Pulls logo, name, tagline + WhatsApp number from settings
+  // so the overlay stays on-brand without any per-client hardcoding.
   function showSuspended() {
     document.documentElement.style.overflow = 'hidden';
+    document.title = (settings.shopName || 'Nzuri Couture') + ' · Back soon';
+
+    const shopName = settings.shopName || 'Nzuri Couture';
+    const tagline = settings.tagline || '';
+    const wa = (settings.whatsappNumber || '').replace(/\D/g, '');
+    const waMsg = encodeURIComponent("Hi " + shopName + "! When are you back online?");
+    const waLink = wa ? ('https://wa.me/' + wa + '?text=' + waMsg) : '';
+    const logoUrl = 'images/logo-nav.jpg?v=2';
+
+    const WA_SVG = '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.71.306 1.263.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413"/></svg>';
+
+    const css = ('@keyframes nzSusFade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}'
+      + '#suspendedOverlay{position:fixed;inset:0;z-index:99999;background:radial-gradient(ellipse at top,#1a1612 0%,#0c0b0a 65%);color:#f2ece0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 24px;font-family:Inter,system-ui,-apple-system,sans-serif;animation:nzSusFade 0.65s ease both;}'
+      + '#suspendedOverlay .ns-logo{width:140px;height:140px;border-radius:50%;object-fit:cover;border:2px solid #c8a96a;box-shadow:0 0 36px rgba(200,169,106,0.35),inset 0 0 0 1px rgba(255,255,255,0.04);margin-bottom:26px;}'
+      + '#suspendedOverlay .ns-name{font-family:\'Cormorant Garamond\',Georgia,serif;font-size:34px;color:#e7d4a2;letter-spacing:2.5px;font-weight:500;line-height:1;margin-bottom:8px;}'
+      + '#suspendedOverlay .ns-tag{font-size:12px;color:#c8a96a;letter-spacing:2px;text-transform:uppercase;margin-bottom:30px;opacity:0.9;}'
+      + '#suspendedOverlay .ns-rule{width:54px;height:1px;background:linear-gradient(90deg,transparent,#c8a96a,transparent);margin-bottom:30px;}'
+      + '#suspendedOverlay .ns-head{font-family:\'Cormorant Garamond\',Georgia,serif;font-weight:500;font-size:clamp(30px,5vw,44px);margin:0 0 16px;color:#f2ece0;line-height:1.15;}'
+      + '#suspendedOverlay .ns-body{font-size:16px;max-width:440px;line-height:1.65;opacity:0.78;margin:0 0 34px;}'
+      + '#suspendedOverlay .ns-wa{display:inline-flex;align-items:center;gap:10px;background:#c8a96a;color:#0c0b0a;padding:14px 30px;border-radius:999px;text-decoration:none;font-weight:600;font-size:15px;letter-spacing:0.3px;box-shadow:0 6px 24px rgba(200,169,106,0.28);transition:transform 0.2s ease,box-shadow 0.2s ease,background 0.2s ease;}'
+      + '#suspendedOverlay .ns-wa:hover{background:#e7d4a2;transform:translateY(-1px);box-shadow:0 8px 28px rgba(200,169,106,0.38);}'
+      + '@media (max-width:480px){#suspendedOverlay .ns-logo{width:118px;height:118px;margin-bottom:22px;}#suspendedOverlay .ns-name{font-size:28px;letter-spacing:2px;}#suspendedOverlay .ns-tag{font-size:11px;margin-bottom:24px;}}'
+    );
+    const styleTag = document.createElement('style');
+    styleTag.textContent = css;
+    document.head.appendChild(styleTag);
+
     const o = document.createElement('div');
     o.id = 'suspendedOverlay';
-    o.style.cssText = 'position:fixed;inset:0;z-index:99999;background:#16110c;color:#eee;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px;font-family:system-ui,-apple-system,sans-serif;';
-    o.innerHTML = '<h1 style="font-weight:600;font-size:clamp(26px,5vw,40px);margin:0 0 14px;">This page is temporarily unavailable</h1>'
-      + '<p style="font-size:16px;max-width:440px;line-height:1.6;opacity:0.8;margin:0;">Please check back soon.</p>';
+    o.innerHTML = (
+      '<img class="ns-logo" src="' + logoUrl + '" alt="' + shopName + '">'
+      + '<div class="ns-name">' + shopName + '</div>'
+      + (tagline ? '<div class="ns-tag">' + tagline + '</div>' : '<div style="height:30px"></div>')
+      + '<div class="ns-rule"></div>'
+      + '<h1 class="ns-head">Closed for a short break</h1>'
+      + '<p class="ns-body">We\'ll be back in a moment. ' + (wa ? 'In the meantime, message us on WhatsApp and we\'ll get right back to you.' : 'Please check back soon.') + '</p>'
+      + (wa ? '<a class="ns-wa" href="' + waLink + '" target="_blank" rel="noopener">' + WA_SVG + ' Message us</a>' : '')
+    );
     document.body.appendChild(o);
   }
 

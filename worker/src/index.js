@@ -43,6 +43,13 @@ const suspendBlock = async (req, env) => {
   return null;
 };
 
+// SHA-256 hex helper for the owner password flow (Web Crypto, available in
+// Workers). Used by /api/check-password and /api/set-password.
+async function sha256Hex(text) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 const b64ToBytes = b64 => {
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
@@ -635,6 +642,58 @@ export default {
 <meta http-equiv="refresh" content="0; url=${SITE}/#shop">
 </head><body style="font-family:system-ui;background:#0c0b0a;color:#e7d4a2;text-align:center;padding:40px">Opening Nzuri Couture…</body></html>`;
       return new Response(html, { status: 200, headers: { "Content-Type": "text/html; charset=utf-8", ...CORS } });
+    }
+
+    // Owner password — check via worker so the same flow works on every device.
+    // The owner's password is stored as SHA-256 hex in KV under "adminpass". If
+    // KV is empty we fall back to the hardcoded FALLBACK_OWNER_PASSWORD (lets the
+    // owner sign in the first time on a fresh build before they've ever set one).
+    // Master logins (env.MASTER_PASSWORD / env.MASTER_TOKEN) ALWAYS work — they're
+    // the agency's permanent recovery path; the owner can never lock us out.
+    // Returns: { ok: bool, source: 'owner'|'master'|null }
+    if (request.method === "POST" && path === "/api/check-password") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "invalid json" }, 400); }
+      const pw = String(body.password || "");
+      if (!pw) return json({ ok: false, source: null });
+      const mp = (env.MASTER_PASSWORD || "").trim();
+      const mt = (env.MASTER_TOKEN || "").trim();
+      if ((mp && pw === mp) || (mt && pw === mt)) return json({ ok: true, source: "master" });
+      // Owner: hash incoming and compare against stored hash, or fall back to plain.
+      const stored = await env.BAGS.get("adminpass");
+      const hashHex = await sha256Hex(pw);
+      if (stored) {
+        return json({ ok: stored === hashHex, source: stored === hashHex ? "owner" : null });
+      }
+      const FALLBACK_OWNER_PASSWORD = "nzuri123";  // first-time login before owner sets their own
+      return json({ ok: pw === FALLBACK_OWNER_PASSWORD, source: pw === FALLBACK_OWNER_PASSWORD ? "owner" : null });
+    }
+
+    // Owner sets a new password. Requires the CURRENT password (owner OR master)
+    // so a logged-in browser can't silently rotate the password if it was opened
+    // by someone else. Stores SHA-256 hex in KV. No bearer token needed — auth is
+    // the `current` field itself.
+    if (request.method === "POST" && path === "/api/set-password") {
+      let body;
+      try { body = await request.json(); } catch { return json({ error: "invalid json" }, 400); }
+      const current = String(body.current || "");
+      const next = String(body.next || "");
+      if (!next || next.length < 8) return json({ error: "new password must be at least 8 characters" }, 400);
+      // Verify current
+      const mp = (env.MASTER_PASSWORD || "").trim();
+      const mt = (env.MASTER_TOKEN || "").trim();
+      let ok = (mp && current === mp) || (mt && current === mt);
+      if (!ok) {
+        const stored = await env.BAGS.get("adminpass");
+        const curHash = await sha256Hex(current);
+        if (stored) ok = stored === curHash;
+        else ok = current === "nzuri123";  // first-time fallback
+      }
+      if (!ok) return json({ error: "current password is wrong" }, 401);
+      // Store new
+      const newHash = await sha256Hex(next);
+      await env.BAGS.put("adminpass", newHash);
+      return json({ ok: true });
     }
 
     // Buyer capture. GHL forwarding is intentionally DISABLED until Nzuri Couture

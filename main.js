@@ -815,7 +815,7 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
   // so the overlay stays on-brand without any per-client hardcoding.
   function showSuspended() {
     document.documentElement.style.overflow = 'hidden';
-    document.title = (settings.shopName || 'Nzuri Couture') + ' · Offline';
+    document.title = (settings.shopName || 'Nzuri Couture') + ' · Paused';
 
     const shopName = settings.shopName || 'Nzuri Couture';
     const tagline = settings.tagline || '';

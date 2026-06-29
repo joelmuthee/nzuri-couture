@@ -620,7 +620,7 @@ const API_BASE = 'https://nzuri-couture-api.stawisystems.workers.dev';
       }
       enquire.href = whatsappLink(item, soldOut, selectedSize);
       track('itemEnquiries', id);
-      gaEvent('enquire', { item_id: id });
+      gaEvent('whatsapp_click', { item_id: id });
       // The anchor's href opens wa.me directly — straight to WhatsApp, no app picker.
       // (Do NOT reintroduce navigator.share here — it forces the OS app-picker, which the owner rejected.)
     }
